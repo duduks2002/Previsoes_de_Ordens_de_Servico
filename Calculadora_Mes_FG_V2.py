@@ -19,7 +19,7 @@ credentials = service_account.Credentials.from_service_account_file(filename = r
 # --------------------------------------------------------------------------------
 def Q_Joy():
     escolha = 0
-    escolha = int(input('Qual categoria analisar:\n[1] JOY; \n[2] Ecohouse; \n[3] Negócio Cocção\n[4] Negócio Cond. Ar; \n[5] Negócio Lavanderia; \n[6] Negócio Microondas\n[7] Negócio Lava Louças; \n[8] Refrigeração; \n[9] Eletroportáteis \n[0] Full\n'))
+    escolha = int(input('Qual categoria analisar:\n\n[1] JOY; \n[2] Ecohouse; \n[3] Negócio Cocção\n[4] Negócio Cond. Ar; \n[5] Negócio Lavanderia; \n[6] Negócio Microondas\n[7] Negócio Lava Louças; \n[8] Refrigeração; \n[9] Eletroportáteis \n[0] Full\n'))
 
     if escolha == 1:
         query= '''
@@ -75,7 +75,6 @@ def Q_Joy():
         --where Negocio = 'Joy'  order by Data_Criacao asc
             '''
     return query
-
 
 #---------------------- GRÁFICO -----------------------------------
 #df_mes.plot(figsize=(12,5))
@@ -136,7 +135,6 @@ def Datas(): # ISSO É INDEPENDENTE NÃO É PRA BUGAR ---> retorna ultimo dia do
     datas_ultimo_dia_mes = [datetime.strftime(i, '%Y-%m-%d') for i in datas_ultimo_dia_mes]
     return datas_ultimo_dia_mes   
 
-
 # ----------------------------- PARTE QUE INTERESSA DA PREVISAO -------------------
 #datas_ultimo_dia_mes = Datas()
 def Previsao(datas_ultimo_dia_mes):
@@ -150,21 +148,28 @@ def Previsao(datas_ultimo_dia_mes):
     final.head(2)
 
 # -------------------------------- MAIN? -------------------------------------------
+def inicio(credentials,query):
+    df = pd.read_gbq(credentials=credentials, query = query, index_col = 'Data_Criacao') 
+    df.head(5)
+    print(df.iloc[-1]) 
+    df.index = pd.to_datetime(df.index)
 
-query = Q_Joy()
-df = pd.read_gbq(credentials=credentials, query = query, index_col = 'Data_Criacao') 
-df.head(5)
-print(df.iloc[-1]) 
-df.index = pd.to_datetime(df.index)
+    data_atual = datetime.now()
+    ultimo_dia_mes_anterior = data_atual.replace(day=1) - timedelta(days=1)
+    dados_filtrados = df[df.index <= ultimo_dia_mes_anterior]
 
-data_atual = datetime.now()
-ultimo_dia_mes_anterior = data_atual.replace(day=1) - timedelta(days=1)
-dados_filtrados = df[df.index <= ultimo_dia_mes_anterior]
+    print(dados_filtrados.iloc[-1])
+    df_mes = dados_filtrados.groupby(pd.Grouper(freq='M')).sum()
+    df_mes.head(10)
+    return df_mes
 
-print(dados_filtrados.iloc[-1])
-df_mes = dados_filtrados.groupby(pd.Grouper(freq='M')).sum()
-df_mes.head(10)
-
-bruteforce_modelo = Arima(df_mes)
-datas_ultimo_dia_mes = Datas()
-Previsao(datas_ultimo_dia_mes)
+contador = 0
+while contador == 0:
+    query = Q_Joy()
+    df_mes = inicio(credentials,query)
+    bruteforce_modelo = Arima(df_mes)
+    datas_ultimo_dia_mes = Datas()
+    Previsao(datas_ultimo_dia_mes)
+    contador = int(input('\n\nContinuar? [0] SIM / [1] Não\n'))
+    if contador > 0:
+        break
